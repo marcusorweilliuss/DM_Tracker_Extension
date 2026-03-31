@@ -1,0 +1,25 @@
+#dm-tracker-sync-btn {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 99999;
+  padding: 8px 16px;
+  background: #d6336c;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: background 0.2s;
+}
+
+#dm-tracker-sync-btn:hover {
+  background: #c2255c;
+}
+
+#dm-tracker-sync-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

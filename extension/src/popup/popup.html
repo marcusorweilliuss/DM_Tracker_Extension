@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DM Tracker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>DM Tracker</h1>
+
+    <!-- Login Form -->
+    <div id="login-section">
+      <input type="text" id="api-url" placeholder="Backend URL (e.g. http://localhost:3001)" value="http://localhost:3001">
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="password" placeholder="Password">
+      <button id="login-btn">Log In</button>
+      <p id="login-error" class="error"></p>
+    </div>
+
+    <!-- Logged-in state -->
+    <div id="logged-in-section" style="display: none;">
+      <p class="user-info">Logged in as <strong id="user-name"></strong></p>
+
+      <div class="actions">
+        <button id="full-sync-btn" class="primary">Full Historical Sync</button>
+        <button id="sync-current-btn">Sync Current Conversation</button>
+      </div>
+
+      <div id="progress-section" style="display: none;">
+        <div class="progress-bar">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <p id="progress-text" class="progress-text"></p>
+      </div>
+
+      <button id="logout-btn" class="link-btn">Log out</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

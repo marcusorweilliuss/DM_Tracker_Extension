@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "DM Tracker Extension",
+  "version": "1.0.0",
+  "description": "Automatically log and manage DM conversations from Carousell into a shared team database.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["https://www.carousell.sg/*"],
+  "background": {
+    "service_worker": "src/background/index.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.carousell.sg/*"],
+      "js": ["src/content/index.js"],
+      "css": ["src/content/styles.css"]
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "public/icons/icon16.png",
+      "48": "public/icons/icon48.png",
+      "128": "public/icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "public/icons/icon16.png",
+    "48": "public/icons/icon48.png",
+    "128": "public/icons/icon128.png"
+  }
+}
