@@ -5,7 +5,7 @@ import { Conversation, ConversationStatus, User } from '../types';
 import StatusSelect from '../components/StatusSelect';
 import {
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import * as XLSX from 'xlsx';
 
