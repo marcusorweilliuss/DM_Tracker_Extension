@@ -55,6 +55,21 @@ export const api = {
       body: JSON.stringify({ status }),
     }),
 
+  updateConversation: (id: string, data: Record<string, any>) =>
+    request<any>(`/conversations/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  deleteConversation: (id: string) =>
+    request<any>(`/conversations/${id}`, { method: 'DELETE' }),
+
+  bulkDeleteConversations: (ids: string[]) =>
+    request<any>('/conversations/bulk-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
+
   getContacts: () => request<any[]>('/contacts'),
 
   getContact: (id: string) => request<any>(`/contacts/${id}`),

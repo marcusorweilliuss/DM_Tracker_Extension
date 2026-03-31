@@ -40,7 +40,7 @@ export interface Message {
   created_at: string;
 }
 
-export type ConversationStatus = 'New' | 'Responded' | 'Following Up' | 'Converted' | 'Not Interested';
+export type ConversationStatus = 'New' | 'Leave it' | 'To Follow Up' | 'Converted' | 'Other';
 
 // API request/response types
 

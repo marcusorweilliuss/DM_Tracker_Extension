@@ -63,20 +63,26 @@ router.get('/:id', authenticate, async (req: Request, res: Response) => {
   }
 });
 
-// Update conversation status
+// Update conversation (status, summary, or contact fields)
 router.patch('/:id', authenticate, async (req: Request, res: Response) => {
   try {
-    const { status } = req.body;
-    const validStatuses = ['New', 'Responded', 'Following Up', 'Converted', 'Not Interested'];
+    const { status, summary } = req.body;
+    const validStatuses = ['New', 'Leave it', 'To Follow Up', 'Converted', 'Other'];
 
     if (status && !validStatuses.includes(status)) {
       res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
       return;
     }
 
+    const updates: Record<string, any> = {};
+    if (status) updates.status = status;
+    if (summary !== undefined) updates.summary = summary;
+    if (req.body.notes !== undefined) updates.notes = req.body.notes;
+    if (req.body.flagged !== undefined) updates.flagged = req.body.flagged;
+
     const { data, error } = await supabase
       .from('conversations')
-      .update({ status })
+      .update(updates)
       .eq('id', req.params.id)
       .select()
       .single();
@@ -86,7 +92,83 @@ router.patch('/:id', authenticate, async (req: Request, res: Response) => {
       return;
     }
 
+    // If contact fields are being updated
+    if (req.body.contact_display_name !== undefined || req.body.contact_username !== undefined) {
+      const { data: conv } = await supabase
+        .from('conversations')
+        .select('contact_id')
+        .eq('id', req.params.id)
+        .single();
+
+      if (conv?.contact_id) {
+        const contactUpdates: Record<string, any> = {};
+        if (req.body.contact_display_name !== undefined) contactUpdates.display_name = req.body.contact_display_name;
+        if (req.body.contact_username !== undefined) contactUpdates.username = req.body.contact_username;
+
+        await supabase
+          .from('contacts')
+          .update(contactUpdates)
+          .eq('id', conv.contact_id);
+      }
+    }
+
     res.json(data);
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete a single conversation and its messages
+router.delete('/:id', authenticate, async (req: Request, res: Response) => {
+  try {
+    // Delete messages first (foreign key constraint)
+    await supabase
+      .from('messages')
+      .delete()
+      .eq('conversation_id', req.params.id);
+
+    const { error } = await supabase
+      .from('conversations')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Bulk delete conversations
+router.post('/bulk-delete', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      res.status(400).json({ error: 'ids must be a non-empty array' });
+      return;
+    }
+
+    // Delete messages first
+    await supabase
+      .from('messages')
+      .delete()
+      .in('conversation_id', ids);
+
+    const { error } = await supabase
+      .from('conversations')
+      .delete()
+      .in('id', ids);
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    res.json({ success: true, deleted: ids.length });
   } catch {
     res.status(500).json({ error: 'Internal server error' });
   }

@@ -23,6 +23,8 @@ export interface Conversation {
   contact_id: string;
   logged_by: string;
   summary: string | null;
+  notes: string | null;
+  flagged: boolean;
   status: ConversationStatus;
   last_message_at: string | null;
   last_synced_at: string | null;
@@ -41,7 +43,7 @@ export interface Message {
   sent_at: string;
 }
 
-export type ConversationStatus = 'New' | 'Responded' | 'Following Up' | 'Converted' | 'Not Interested';
+export type ConversationStatus = 'New' | 'Leave it' | 'To Follow Up' | 'Converted' | 'Other';
 
 export interface AuthState {
   token: string;

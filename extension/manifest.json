@@ -6,8 +6,7 @@
   "permissions": ["storage", "activeTab"],
   "host_permissions": ["https://www.carousell.sg/*"],
   "background": {
-    "service_worker": "src/background/index.js",
-    "type": "module"
+    "service_worker": "src/background/index.js"
   },
   "content_scripts": [
     {
@@ -17,16 +16,6 @@
     }
   ],
   "action": {
-    "default_popup": "src/popup/popup.html",
-    "default_icon": {
-      "16": "public/icons/icon16.png",
-      "48": "public/icons/icon48.png",
-      "128": "public/icons/icon128.png"
-    }
-  },
-  "icons": {
-    "16": "public/icons/icon16.png",
-    "48": "public/icons/icon48.png",
-    "128": "public/icons/icon128.png"
+    "default_popup": "src/popup/popup.html"
   }
 }

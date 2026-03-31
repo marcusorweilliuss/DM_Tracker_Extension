@@ -2,10 +2,10 @@ import { ConversationStatus } from '../types';
 
 const statuses: ConversationStatus[] = [
   'New',
-  'Responded',
-  'Following Up',
+  'Leave it',
+  'To Follow Up',
   'Converted',
-  'Not Interested',
+  'Other',
 ];
 
 interface StatusSelectProps {
