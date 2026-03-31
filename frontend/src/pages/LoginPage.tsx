@@ -4,9 +4,10 @@ import { AuthState } from '../types';
 
 interface LoginPageProps {
   onLogin: (auth: AuthState) => void;
+  onForgotPassword: () => void;
 }
 
-export default function LoginPage({ onLogin }: LoginPageProps) {
+export default function LoginPage({ onLogin, onForgotPassword }: LoginPageProps) {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -63,6 +64,18 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
             required
           />
+
+          {!isRegister && (
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                className="text-xs text-brand-500 hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
 
           {error && <p className="text-red-500 text-xs">{error}</p>}
 

@@ -77,4 +77,22 @@ export const api = {
   getContact: (id: string) => request<any>(`/contacts/${id}`),
 
   getUsers: () => request<{ id: string; email: string; name: string }[]>('/users'),
+
+  forgotPassword: (email: string) =>
+    request<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, frontendUrl: window.location.origin }),
+    }),
+
+  resetPassword: (token: string, newPassword: string) =>
+    request<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    }),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<{ message: string }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
 };
