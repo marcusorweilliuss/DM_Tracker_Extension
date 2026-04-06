@@ -2,6 +2,35 @@ import { PlatformExtractor, ExtractedConversation, SyncProgress } from '../types
 import { syncConversations } from '../utils/api';
 import { scrollAndWait, sleep } from '../utils/dom';
 
+// Skip these automated/spam accounts
+const SKIP_USERNAMES = [
+  'carousell_assistant',
+  'admin',
+  'carousell',
+  'carousell_support',
+  'carousell_team',
+];
+
+function shouldSkipConversation(conversation: ExtractedConversation): boolean {
+  // Skip known spam/automated accounts
+  const contactName = (conversation.contact.username || conversation.contact.displayName || '').toLowerCase();
+  if (SKIP_USERNAMES.some(spam => contactName.includes(spam))) {
+    return true;
+  }
+
+  // Skip conversations that don't mention "refit" in any message
+  if (conversation.messages.length > 0) {
+    const hasRefit = conversation.messages.some(msg =>
+      msg.body.toLowerCase().includes('refit')
+    );
+    if (!hasRefit) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /**
  * Full historical sync — scrolls through the entire inbox,
  * opens each conversation, scrolls to load all messages, and syncs.
@@ -78,7 +107,11 @@ export async function fullSync(
     // Extract conversation data (ID comes from URL now)
     const conversation = await extractor.extractCurrentConversation();
     if (conversation) {
-      batch.push(conversation);
+      if (shouldSkipConversation(conversation)) {
+        console.log(`[DM Tracker] Skipping "${conversation.contact.username || conversation.contact.displayName}" (spam/no refit mention)`);
+      } else {
+        batch.push(conversation);
+      }
     }
 
     // Send batch to backend

@@ -391,6 +391,30 @@
     },
   };
 
+  // ── Spam Filter ──────────────────────────────────────────────────
+
+  var SKIP_USERNAMES = ['carousell_assistant', 'admin', 'carousell', 'carousell_support', 'carousell_team'];
+
+  function shouldSkipConversation(conversation) {
+    // Skip known spam/automated accounts
+    var contactName = (conversation.contact.username || conversation.contact.display_name || '').toLowerCase();
+    if (SKIP_USERNAMES.some(function (spam) { return contactName.includes(spam); })) {
+      return true;
+    }
+
+    // Skip conversations that don't mention "refit" in any message
+    if (conversation.messages.length > 0) {
+      var hasRefit = conversation.messages.some(function (msg) {
+        return msg.body.toLowerCase().includes('refit');
+      });
+      if (!hasRefit) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   // ── Sync Functions ─────────────────────────────────────────────────
 
   async function fullSync(extractor, onProgress) {
@@ -472,7 +496,13 @@
       }
 
       var conversation = await extractor.extractCurrentConversation();
-      if (conversation) batch.push(conversation);
+      if (conversation) {
+        if (shouldSkipConversation(conversation)) {
+          console.log('[DM Tracker] Skipping "' + (conversation.contact.username || conversation.contact.display_name) + '" (spam/no refit mention)');
+        } else {
+          batch.push(conversation);
+        }
+      }
 
       if (batch.length >= batchSize || i === total - 1) {
         if (batch.length > 0) {
