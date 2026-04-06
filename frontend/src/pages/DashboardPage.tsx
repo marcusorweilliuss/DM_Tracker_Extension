@@ -281,7 +281,7 @@ export default function DashboardPage() {
               try {
                 const result = await api.cleanupConversations();
                 alert(result.message);
-                fetchConversations();
+                loadData();
               } catch (err: any) {
                 alert('Cleanup failed: ' + err.message);
               }
