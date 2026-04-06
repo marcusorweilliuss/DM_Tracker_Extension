@@ -452,15 +452,20 @@
           break;
         }
 
-        // Scroll down incrementally (not jumping to bottom)
-        inboxContainer.scrollTop += 800;
-        // Also try scrolling the last conversation element into view
+        // Scroll down using multiple methods to trigger lazy loading
+        // Method 1: Set scrollTop
+        inboxContainer.scrollTop = inboxContainer.scrollHeight;
+        // Method 2: Dispatch scroll event to trigger React/virtual scroll listeners
+        inboxContainer.dispatchEvent(new Event('scroll', { bubbles: true }));
+        // Method 3: Use wheel event
+        inboxContainer.dispatchEvent(new WheelEvent('wheel', { deltaY: 500, bubbles: true }));
+        // Method 4: Scroll last item into view
         var currentItems = extractor.getConversationList();
         if (currentItems.length > 0) {
           var lastItem = currentItems[currentItems.length - 1];
           lastItem.scrollIntoView({ behavior: 'smooth', block: 'end' });
         }
-        await sleep(2000);
+        await sleep(2500);
 
         // Check how many conversations we have now
         var currentCount = extractor.getConversationList().length;
