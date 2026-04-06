@@ -181,13 +181,13 @@
       // Find the container that has the profile card as one child and
       // message groups as other children. The correct container has:
       // - One child with "on Carousell" + "review" text (profile card)
-      // - Multiple other children with message <p> elements
+      // - At least 1 other child with message <p> elements
       var allDivs = document.querySelectorAll('div');
       var bestMatch = null;
       var bestDepth = -1;
       for (var i = 0; i < allDivs.length; i++) {
         var div = allDivs[i];
-        if (div.children.length < 3) continue; // Need profile card + at least 2 messages
+        if (div.children.length < 2) continue; // Need profile card + at least 1 message
 
         var hasProfileCard = false;
         var messageChildCount = 0;
@@ -201,7 +201,7 @@
           }
         }
 
-        if (hasProfileCard && messageChildCount >= 2) {
+        if (hasProfileCard && messageChildCount >= 1) {
           var depth = 0;
           var parent = div.parentElement;
           while (parent) { depth++; parent = parent.parentElement; }
@@ -412,10 +412,15 @@
       return true;
     }
 
-    // Skip conversations that don't mention "refit" in any message
     if (conversation.messages.length > 0) {
+      // Skip conversations where the contact messaged first (ads/spam)
+      if (conversation.messages[0].sender === 'contact') {
+        return true;
+      }
+
+      // Skip conversations that don't mention "refit" in any message from the user
       var hasRefit = conversation.messages.some(function (msg) {
-        return msg.body.toLowerCase().includes('refit');
+        return msg.sender === 'user' && msg.body.toLowerCase().includes('refit');
       });
       if (!hasRefit) {
         return true;

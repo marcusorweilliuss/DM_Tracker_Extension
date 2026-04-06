@@ -18,10 +18,15 @@ function shouldSkipConversation(conversation: ExtractedConversation): boolean {
     return true;
   }
 
-  // Skip conversations that don't mention "refit" in any message
   if (conversation.messages.length > 0) {
+    // Skip conversations where the contact messaged first (ads/spam)
+    if (conversation.messages[0].sender === 'contact') {
+      return true;
+    }
+
+    // Skip conversations that don't mention "refit" in any message from the user
     const hasRefit = conversation.messages.some(msg =>
-      msg.body.toLowerCase().includes('refit')
+      msg.sender === 'user' && msg.body.toLowerCase().includes('refit')
     );
     if (!hasRefit) {
       return true;
