@@ -174,4 +174,65 @@ router.post('/bulk-delete', authenticate, async (req: Request, res: Response) =>
   }
 });
 
+// Cleanup: remove spam accounts and conversations without "refit" mention
+router.post('/cleanup', authenticate, async (req: Request, res: Response) => {
+  try {
+    const spamUsernames = ['carousell_assistant', 'admin', 'carousell', 'carousell_support', 'carousell_team'];
+
+    // Step 1: Find conversations with spam contacts
+    const { data: spamContacts } = await supabase
+      .from('contacts')
+      .select('id, username, display_name')
+      .or(spamUsernames.map(s => `username.ilike.%${s}%`).join(','));
+
+    const spamContactIds = (spamContacts || []).map(c => c.id);
+
+    // Step 2: Find all conversations and their messages
+    const { data: allConvs } = await supabase
+      .from('conversations')
+      .select('id, contact_id');
+
+    if (!allConvs || allConvs.length === 0) {
+      res.json({ deleted: 0, message: 'No conversations to clean up' });
+      return;
+    }
+
+    const toDelete: string[] = [];
+
+    // Mark spam contact conversations for deletion
+    for (const conv of allConvs) {
+      if (spamContactIds.includes(conv.contact_id)) {
+        toDelete.push(conv.id);
+        continue;
+      }
+
+      // Check if any message mentions "refit"
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('body')
+        .eq('conversation_id', conv.id);
+
+      if (messages && messages.length > 0) {
+        const hasRefit = messages.some(m => m.body.toLowerCase().includes('refit'));
+        if (!hasRefit) {
+          toDelete.push(conv.id);
+        }
+      }
+    }
+
+    if (toDelete.length === 0) {
+      res.json({ deleted: 0, message: 'No junk conversations found' });
+      return;
+    }
+
+    // Delete messages first, then conversations
+    await supabase.from('messages').delete().in('conversation_id', toDelete);
+    await supabase.from('conversations').delete().in('id', toDelete);
+
+    res.json({ deleted: toDelete.length, message: `Removed ${toDelete.length} junk conversations` });
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

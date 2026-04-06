@@ -276,6 +276,19 @@ export default function DashboardPage() {
             </svg>
             Export Excel
           </button>
+          <button onClick={async () => {
+              if (!confirm('This will remove all spam accounts and conversations that don\'t mention "refit". Continue?')) return;
+              try {
+                const result = await api.cleanupConversations();
+                alert(result.message);
+                fetchConversations();
+              } catch (err: any) {
+                alert('Cleanup failed: ' + err.message);
+              }
+            }}
+            className="px-4 py-2 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors">
+            Cleanup Junk
+          </button>
           <button onClick={() => setShowCharts(!showCharts)}
             className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${showCharts ? 'bg-brand-500 text-white hover:bg-brand-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>
             {showCharts ? 'Hide Charts' : 'Show Charts'}

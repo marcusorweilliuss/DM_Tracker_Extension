@@ -95,4 +95,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ currentPassword, newPassword }),
     }),
+
+  cleanupConversations: () =>
+    request<{ deleted: number; message: string }>('/conversations/cleanup', {
+      method: 'POST',
+    }),
 };
