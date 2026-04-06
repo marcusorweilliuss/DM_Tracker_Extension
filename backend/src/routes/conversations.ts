@@ -4,15 +4,22 @@ import { supabase } from '../utils/supabase';
 
 const router = Router();
 
-// List all conversations with contact info
+// List all conversations with contact info (excludes soft-deleted)
 router.get('/', authenticate, async (req: Request, res: Response) => {
   try {
-    const { status, logged_by, from, to } = req.query;
+    const { status, logged_by, from, to, deleted } = req.query;
 
     let query = supabase
       .from('conversations')
       .select('*, contacts(*), users!conversations_logged_by_fkey(id, name, email)')
       .order('last_message_at', { ascending: false });
+
+    // Show deleted or non-deleted conversations
+    if (deleted === 'true') {
+      query = query.not('deleted_at', 'is', null);
+    } else {
+      query = query.is('deleted_at', null);
+    }
 
     if (status) query = query.eq('status', status as string);
     if (logged_by) query = query.eq('logged_by', logged_by as string);
@@ -118,18 +125,12 @@ router.patch('/:id', authenticate, async (req: Request, res: Response) => {
   }
 });
 
-// Delete a single conversation and its messages
+// Soft-delete a single conversation
 router.delete('/:id', authenticate, async (req: Request, res: Response) => {
   try {
-    // Delete messages first (foreign key constraint)
-    await supabase
-      .from('messages')
-      .delete()
-      .eq('conversation_id', req.params.id);
-
     const { error } = await supabase
       .from('conversations')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', req.params.id);
 
     if (error) {
@@ -143,7 +144,7 @@ router.delete('/:id', authenticate, async (req: Request, res: Response) => {
   }
 });
 
-// Bulk delete conversations
+// Bulk soft-delete conversations
 router.post('/bulk-delete', authenticate, async (req: Request, res: Response) => {
   try {
     const { ids } = req.body;
@@ -152,16 +153,77 @@ router.post('/bulk-delete', authenticate, async (req: Request, res: Response) =>
       return;
     }
 
-    // Delete messages first
-    await supabase
-      .from('messages')
-      .delete()
-      .in('conversation_id', ids);
+    const { error } = await supabase
+      .from('conversations')
+      .update({ deleted_at: new Date().toISOString() })
+      .in('id', ids);
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    res.json({ success: true, deleted: ids.length });
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Restore a soft-deleted conversation
+router.post('/:id/restore', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { error } = await supabase
+      .from('conversations')
+      .update({ deleted_at: null })
+      .eq('id', req.params.id);
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Bulk restore soft-deleted conversations
+router.post('/bulk-restore', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      res.status(400).json({ error: 'ids must be a non-empty array' });
+      return;
+    }
 
     const { error } = await supabase
       .from('conversations')
-      .delete()
+      .update({ deleted_at: null })
       .in('id', ids);
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+
+    res.json({ success: true, restored: ids.length });
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Permanently delete conversations (from trash)
+router.post('/permanent-delete', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      res.status(400).json({ error: 'ids must be a non-empty array' });
+      return;
+    }
+
+    await supabase.from('messages').delete().in('conversation_id', ids);
+    const { error } = await supabase.from('conversations').delete().in('id', ids);
 
     if (error) {
       res.status(500).json({ error: error.message });
@@ -225,11 +287,13 @@ router.post('/cleanup', authenticate, async (req: Request, res: Response) => {
       return;
     }
 
-    // Delete messages first, then conversations
-    await supabase.from('messages').delete().in('conversation_id', toDelete);
-    await supabase.from('conversations').delete().in('id', toDelete);
+    // Soft-delete conversations (move to trash)
+    await supabase
+      .from('conversations')
+      .update({ deleted_at: new Date().toISOString() })
+      .in('id', toDelete);
 
-    res.json({ deleted: toDelete.length, message: `Removed ${toDelete.length} junk conversations` });
+    res.json({ deleted: toDelete.length, message: `Moved ${toDelete.length} junk conversations to Recently Deleted` });
   } catch {
     res.status(500).json({ error: 'Internal server error' });
   }

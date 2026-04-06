@@ -28,6 +28,7 @@ export interface Conversation {
   status: ConversationStatus;
   last_message_at: string | null;
   last_synced_at: string | null;
+  deleted_at: string | null;
   created_at: string;
   contacts?: Contact;
   users?: User;

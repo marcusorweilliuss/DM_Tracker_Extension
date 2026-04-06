@@ -100,4 +100,22 @@ export const api = {
     request<{ deleted: number; message: string }>('/conversations/cleanup', {
       method: 'POST',
     }),
+
+  getDeletedConversations: () =>
+    request<any[]>('/conversations?deleted=true'),
+
+  restoreConversation: (id: string) =>
+    request<any>(`/conversations/${id}/restore`, { method: 'POST' }),
+
+  bulkRestoreConversations: (ids: string[]) =>
+    request<any>('/conversations/bulk-restore', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
+
+  permanentDeleteConversations: (ids: string[]) =>
+    request<any>('/conversations/permanent-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
 };

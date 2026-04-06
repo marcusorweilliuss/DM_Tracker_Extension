@@ -45,6 +45,10 @@ export default function DashboardPage() {
   // Charts visibility
   const [showCharts, setShowCharts] = useState(true);
 
+  // Recently Deleted view
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [deletedConversations, setDeletedConversations] = useState<Conversation[]>([]);
+
   useEffect(() => { loadData(); }, []);
 
   useEffect(() => {
@@ -53,9 +57,14 @@ export default function DashboardPage() {
 
   const loadData = async () => {
     try {
-      const [convs, userList] = await Promise.all([api.getConversations(), api.getUsers()]);
+      const [convs, userList, deleted] = await Promise.all([
+        api.getConversations(),
+        api.getUsers(),
+        api.getDeletedConversations(),
+      ]);
       setConversations(convs);
       setUsers(userList);
+      setDeletedConversations(deleted);
     } catch (err) {
       console.error('Failed to load data:', err);
     } finally {
@@ -104,6 +113,32 @@ export default function DashboardPage() {
       setConversations((prev) => prev.filter((c) => !selectedIds.has(c.id)));
       setSelectedIds(new Set());
     } catch (err) { console.error('Failed to bulk delete:', err); }
+  };
+
+  // ── Restore & Permanent Delete ──────────────────────
+  const handleRestore = async (id: string) => {
+    try {
+      await api.restoreConversation(id);
+      loadData();
+    } catch (err) { console.error('Failed to restore:', err); }
+  };
+
+  const handleBulkRestore = async () => {
+    try {
+      await api.bulkRestoreConversations(Array.from(selectedIds));
+      setSelectedIds(new Set());
+      loadData();
+    } catch (err) { console.error('Failed to bulk restore:', err); }
+  };
+
+  const handlePermanentDelete = async () => {
+    const count = selectedIds.size;
+    if (!window.confirm(`Permanently delete ${count} conversation${count > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    try {
+      await api.permanentDeleteConversations(Array.from(selectedIds));
+      setSelectedIds(new Set());
+      loadData();
+    } catch (err) { console.error('Failed to permanently delete:', err); }
   };
 
   // ── Flag Toggle ──────────────────────────────────────
@@ -261,7 +296,13 @@ export default function DashboardPage() {
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-800">All Conversations</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-bold text-gray-800">{showDeleted ? 'Recently Deleted' : 'All Conversations'}</h2>
+          <button onClick={() => { setShowDeleted(!showDeleted); setSelectedIds(new Set()); }}
+            className={`text-sm px-3 py-1 rounded-full transition-colors ${showDeleted ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+            {showDeleted ? 'Back to All' : `Trash (${deletedConversations.length})`}
+          </button>
+        </div>
         <div className="flex gap-2">
           {selectedIds.size > 0 && (
             <button onClick={handleBulkDelete}
@@ -296,8 +337,82 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Recently Deleted View */}
+      {showDeleted && (
+        <div className="mb-4">
+          {selectedIds.size > 0 && (
+            <div className="flex gap-2 mb-3">
+              <button onClick={handleBulkRestore}
+                className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors">
+                Restore {selectedIds.size} selected
+              </button>
+              <button onClick={handlePermanentDelete}
+                className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
+                Delete permanently
+              </button>
+            </div>
+          )}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-left text-gray-500 text-xs uppercase tracking-wide">
+                <tr>
+                  <th className="px-4 py-3 w-10">
+                    <input type="checkbox"
+                      checked={deletedConversations.length > 0 && selectedIds.size === deletedConversations.length}
+                      onChange={() => {
+                        if (selectedIds.size === deletedConversations.length) setSelectedIds(new Set());
+                        else setSelectedIds(new Set(deletedConversations.map(c => c.id)));
+                      }}
+                      className="rounded border-gray-300" />
+                  </th>
+                  <th className="px-4 py-3">Contact</th>
+                  <th className="px-4 py-3">Platform</th>
+                  <th className="px-4 py-3">Logged by</th>
+                  <th className="px-4 py-3">Summary</th>
+                  <th className="px-4 py-3">Deleted at</th>
+                  <th className="px-4 py-3 w-24">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {deletedConversations.length === 0 ? (
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Trash is empty</td></tr>
+                ) : (
+                  deletedConversations.map((conv) => {
+                    const contact = (conv as any).contacts;
+                    return (
+                      <tr key={conv.id} className={`transition-colors ${selectedIds.has(conv.id) ? 'bg-pink-50' : 'hover:bg-gray-50'}`}>
+                        <td className="px-4 py-3">
+                          <input type="checkbox" checked={selectedIds.has(conv.id)}
+                            onChange={() => toggleSelect(conv.id)} className="rounded border-gray-300" />
+                        </td>
+                        <td className="px-4 py-3 font-medium text-gray-800">
+                          {contact?.display_name || contact?.username || '---'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 capitalize">{conv.platform}</td>
+                        <td className="px-4 py-3 text-gray-500">{(conv as any).users?.name || '---'}</td>
+                        <td className="px-4 py-3 text-gray-500 max-w-xs truncate">{conv.summary || '---'}</td>
+                        <td className="px-4 py-3 text-gray-400 text-xs">
+                          {(conv as any).deleted_at ? new Date((conv as any).deleted_at).toLocaleString() : '---'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <button onClick={() => handleRestore(conv.id)}
+                            className="text-green-500 hover:text-green-700 text-xs font-medium mr-2">
+                            Restore
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-gray-400 mt-3">{deletedConversations.length} deleted conversations</p>
+        </div>
+      )}
+
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-4">
+      {!showDeleted && <><div className="flex flex-wrap gap-3 mb-4">
         <input
           type="text"
           value={filterUsername}
@@ -515,6 +630,7 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+      </>}
     </div>
   );
 }
