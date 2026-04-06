@@ -12,25 +12,10 @@ const SKIP_USERNAMES = [
 ];
 
 function shouldSkipConversation(conversation: ExtractedConversation): boolean {
-  // Skip known spam/automated accounts
+  // Only skip known spam/automated accounts
   const contactName = (conversation.contact.username || conversation.contact.displayName || '').toLowerCase();
   if (SKIP_USERNAMES.some(spam => contactName.includes(spam))) {
     return true;
-  }
-
-  if (conversation.messages.length > 0) {
-    // Skip conversations where the contact messaged first (ads/spam)
-    if (conversation.messages[0].sender === 'contact') {
-      return true;
-    }
-
-    // Skip conversations that don't mention "refit" in any message from the user
-    const hasRefit = conversation.messages.some(msg =>
-      msg.sender === 'user' && msg.body.toLowerCase().includes('refit')
-    );
-    if (!hasRefit) {
-      return true;
-    }
   }
 
   return false;

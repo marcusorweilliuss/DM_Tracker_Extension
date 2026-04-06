@@ -406,25 +406,10 @@
   var SKIP_USERNAMES = ['carousell_assistant', 'admin', 'carousell', 'carousell_support', 'carousell_team'];
 
   function shouldSkipConversation(conversation) {
-    // Skip known spam/automated accounts
+    // Only skip known spam/automated accounts
     var contactName = (conversation.contact.username || conversation.contact.display_name || '').toLowerCase();
     if (SKIP_USERNAMES.some(function (spam) { return contactName.includes(spam); })) {
       return true;
-    }
-
-    if (conversation.messages.length > 0) {
-      // Skip conversations where the contact messaged first (ads/spam)
-      if (conversation.messages[0].sender === 'contact') {
-        return true;
-      }
-
-      // Skip conversations that don't mention "refit" in any message from the user
-      var hasRefit = conversation.messages.some(function (msg) {
-        return msg.sender === 'user' && msg.body.toLowerCase().includes('refit');
-      });
-      if (!hasRefit) {
-        return true;
-      }
     }
 
     return false;
