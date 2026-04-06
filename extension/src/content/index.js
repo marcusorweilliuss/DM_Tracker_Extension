@@ -94,10 +94,20 @@
     getInboxScrollContainer: function () {
       var container = this._findChatListContainer();
       if (!container) return null;
+      // Walk up the DOM to find the actual scrollable ancestor
+      var el = container;
+      for (var i = 0; i < 10; i++) {
+        if (!el) break;
+        var style = window.getComputedStyle(el);
+        var overflowY = style.overflowY;
+        if ((overflowY === 'auto' || overflowY === 'scroll') && el.scrollHeight > el.clientHeight + 10) {
+          return el;
+        }
+        el = el.parentElement;
+      }
+      // Fallback: return the container itself
       if (container.scrollHeight > container.clientHeight) return container;
-      var parent = container.parentElement;
-      if (parent && parent.scrollHeight > parent.clientHeight) return parent;
-      return container;
+      return container.parentElement || container;
     },
 
     getMessageScrollContainer: function () {
@@ -428,33 +438,47 @@
 
     // Scroll inbox to load all conversations
     var inboxContainer = extractor.getInboxScrollContainer();
+    console.log('[DM Tracker] Inbox scroll container:', inboxContainer ? inboxContainer.tagName + '.' + inboxContainer.className.substring(0, 30) : 'NOT FOUND');
+    console.log('[DM Tracker] Container scrollHeight:', inboxContainer ? inboxContainer.scrollHeight : 'N/A', 'clientHeight:', inboxContainer ? inboxContainer.clientHeight : 'N/A');
+
     if (inboxContainer) {
       var previousCount = 0;
       var noChangeStreak = 0;
-      for (var scrollAttempt = 0; scrollAttempt < 200; scrollAttempt++) {
-        // Check if we've reached the end ("That's all for your chats")
+      for (var scrollAttempt = 0; scrollAttempt < 500; scrollAttempt++) {
+        // Check if we've reached the end
         var endMarker = document.body.textContent || '';
         if (endMarker.includes("That's all for your chats") || endMarker.includes("Older messages may have been deleted")) {
           console.log('[DM Tracker] Reached end of conversation list');
           break;
         }
 
-        // Scroll down
-        inboxContainer.scrollTop = inboxContainer.scrollHeight;
-        await sleep(2500);
+        // Scroll down incrementally (not jumping to bottom)
+        inboxContainer.scrollTop += 800;
+        // Also try scrolling the last conversation element into view
+        var currentItems = extractor.getConversationList();
+        if (currentItems.length > 0) {
+          var lastItem = currentItems[currentItems.length - 1];
+          lastItem.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+        await sleep(2000);
 
         // Check how many conversations we have now
         var currentCount = extractor.getConversationList().length;
+        if (scrollAttempt % 5 === 0) {
+          console.log('[DM Tracker] Scroll attempt ' + scrollAttempt + ', conversations found: ' + currentCount);
+        }
         onProgress({ total: currentCount, current: 0, status: 'syncing', message: 'Loading conversations... found ' + currentCount + ' so far' });
 
         if (currentCount === previousCount) {
           noChangeStreak++;
-          if (noChangeStreak >= 3) break; // 3 scrolls with no new conversations = done
+          if (noChangeStreak >= 5) break; // 5 scrolls with no new conversations = done
         } else {
           noChangeStreak = 0;
         }
         previousCount = currentCount;
       }
+    } else {
+      console.error('[DM Tracker] Could not find inbox scroll container!');
     }
 
     var convElements = extractor.getConversationList();

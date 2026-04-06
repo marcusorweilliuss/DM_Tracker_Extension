@@ -59,16 +59,19 @@ export class CarousellExtractor implements PlatformExtractor {
   getInboxScrollContainer(): HTMLElement | null {
     const container = this.findChatListContainer();
     if (!container) return null;
-    // The scrollable container might be the list itself or its parent
-    if (container.scrollHeight > container.clientHeight) {
-      return container;
+    // Walk up the DOM to find the actual scrollable ancestor
+    let el: HTMLElement | null = container;
+    for (let i = 0; i < 10; i++) {
+      if (!el) break;
+      const style = window.getComputedStyle(el);
+      const overflowY = style.overflowY;
+      if ((overflowY === 'auto' || overflowY === 'scroll') && el.scrollHeight > el.clientHeight + 10) {
+        return el;
+      }
+      el = el.parentElement;
     }
-    // Check parent
-    const parent = container.parentElement;
-    if (parent && parent.scrollHeight > parent.clientHeight) {
-      return parent;
-    }
-    return container;
+    if (container.scrollHeight > container.clientHeight) return container;
+    return container.parentElement || container;
   }
 
   /**
